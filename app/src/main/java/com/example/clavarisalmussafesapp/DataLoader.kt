@@ -6,46 +6,48 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
-import java.io.IOException
 
 object DataLoader {
 
     private val client = OkHttpClient()
     
-    // URLs Raw de GitHub para que la app pueda leer el JSON correctamente
+    // URLs en formato RAW para obtener el JSON directamente de GitHub
     private const val NEWS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/news.json"
     private const val EVENTS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/events.json"
 
     suspend fun loadNews(context: Context): List<NewsPost> = withContext(Dispatchers.IO) {
         val newsList = mutableListOf<NewsPost>()
         
+        // Intentar cargar desde la red
         val jsonString = try {
             val request = Request.Builder().url(NEWS_URL).build()
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
-                response.body?.string()
+                if (response.isSuccessful) {
+                    response.body?.string()
+                } else {
+                    null
+                }
             }
         } catch (e: Exception) {
-            try {
-                context.assets.open("news.json").bufferedReader().use { it.readText() }
-            } catch (ioe: Exception) {
-                null
-            }
+            null
         }
 
-        jsonString?.let {
+        // Si falla la red o devuelve null, cargar de local (assets) como fallback
+        val finalJsonString = jsonString ?: try {
+            context.assets.open("news.json").bufferedReader().use { it.readText() }
+        } catch (ioe: Exception) {
+            null
+        }
+
+        finalJsonString?.let {
             try {
                 val jsonArray = JSONArray(it)
-                // Guardamos el contador actual para evitar notificaciones redundantes
-                val sharedPrefs = context.getSharedPreferences("clavaris_prefs", Context.MODE_PRIVATE)
-                sharedPrefs.edit().putInt("last_news_count", jsonArray.length()).apply()
-
                 for (i in 0 until jsonArray.length()) {
                     val obj = jsonArray.getJSONObject(i)
                     newsList.add(
                         NewsPost(
-                            title = obj.getString("title"),
-                            description = obj.getString("description"),
+                            title = obj.optString("title", ""),
+                            description = obj.optString("description", ""),
                             imageResName = if (obj.has("imageResName")) obj.getString("imageResName") else null,
                             imageUrl = if (obj.has("imageUrl")) obj.getString("imageUrl") else null
                         )
@@ -61,37 +63,51 @@ object DataLoader {
     suspend fun loadEvents(context: Context): List<CalendarEvent> = withContext(Dispatchers.IO) {
         val eventList = mutableListOf<CalendarEvent>()
         
+        // Intentar cargar desde la red
         val jsonString = try {
             val request = Request.Builder().url(EVENTS_URL).build()
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
-                response.body?.string()
+                if (response.isSuccessful) {
+                    response.body?.string()
+                } else {
+                    null
+                }
             }
         } catch (e: Exception) {
-            try {
-                context.assets.open("events.json").bufferedReader().use { it.readText() }
-            } catch (ioe: Exception) {
-                null
-            }
+            null
         }
 
-        jsonString?.let {
+        // Si falla la red o devuelve null, cargar de local (assets) como fallback
+        val finalJsonString = jsonString ?: try {
+            context.assets.open("events.json").bufferedReader().use { it.readText() }
+        } catch (ioe: Exception) {
+            null
+        }
+
+        finalJsonString?.let {
             try {
                 val jsonArray = JSONArray(it)
-                // Guardamos el contador actual
-                val sharedPrefs = context.getSharedPreferences("clavaris_prefs", Context.MODE_PRIVATE)
-                sharedPrefs.edit().putInt("last_events_count", jsonArray.length()).apply()
-
                 for (i in 0 until jsonArray.length()) {
                     val obj = jsonArray.getJSONObject(i)
-                    eventList.add(
-                        CalendarEvent(
-                            date = obj.getString("date"),
-                            title = obj.getString("title"),
-                            time = obj.getString("time"),
-                            type = EventType.valueOf(obj.getString("type"))
+                    try {
+                        val typeStr = obj.optString("type", "EVENT")
+                        val eventType = try {
+                            EventType.valueOf(typeStr)
+                        } catch (e: IllegalArgumentException) {
+                            EventType.EVENT
+                        }
+
+                        eventList.add(
+                            CalendarEvent(
+                                date = obj.optString("date", ""),
+                                title = obj.optString("title", ""),
+                                time = obj.optString("time", ""),
+                                type = eventType
+                            )
                         )
-                    )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
