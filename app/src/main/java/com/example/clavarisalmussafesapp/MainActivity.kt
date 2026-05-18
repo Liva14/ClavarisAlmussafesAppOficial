@@ -26,7 +26,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.clavarisalmussafesapp.ui.theme.ClavarisAlmussafesAppTheme
+import java.util.concurrent.TimeUnit
 
 object Screens {
     object Home : Screen("home", "Clavaris Almussafes", Icons.Default.Home)
@@ -41,8 +47,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         val sharedPref = getSharedPreferences("prefs", Context.MODE_PRIVATE)
-        
-        createNotificationChannel()
+        NotificationHelper.createNotificationChannel(this)
+        scheduleUpdateWorker()
+
         enableEdgeToEdge()
         setContent {
             var isDarkMode by remember { 
@@ -61,36 +68,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Avisos Clavaris"
-            val descriptionText = "Canal para notificaciones de Clavaris Almussafes"
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel("CLAVARIS_CH", name, importance).apply {
-                description = descriptionText
-            }
-            val notificationManager: NotificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
+    private fun scheduleUpdateWorker() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val updateRequest = PeriodicWorkRequestBuilder<UpdateWorker>(4, TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "clavaris_update_worker",
+            ExistingPeriodicWorkPolicy.KEEP,
+            updateRequest
+        )
     }
 }
 
 fun sendNotification(context: Context) {
-    val builder = NotificationCompat.Builder(context, "CLAVARIS_CH")
-        .setSmallIcon(R.drawable.ic_notification_logo)
-        .setContentTitle("Notificacions Actives")
-        .setContentText("Ara rebràs les noticies de Clavaris Almussafes.")
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .setAutoCancel(true)
-
-    with(NotificationManagerCompat.from(context)) {
-        try {
-            notify(1, builder.build())
-        } catch (e: SecurityException) {
-            // Permission not granted
-        }
-    }
+    NotificationHelper.sendNotification(
+        context,
+        "Notificacions Actives",
+        "Ara rebràs les noticies de Clavaris Almussafes."
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

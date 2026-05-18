@@ -64,9 +64,10 @@ fun HomeScreen() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Aquesta és l'aplicació oficial dels Clavaris d'Almussafes. " +
-                "Aquí podràs trobar tota la informació sobre els nosaltres esdeveniments, " +
-                "calendari de festes, rifes i les darreres notícies de la nostra activitat.",
+                "Benvolgut poble d'Almussafes, som els Clavaris de la Divina Aurora d'Almussafes per a les festes de 2026‼️\n\n" +
+                "Tenim un any molt especial per davant, que ens ompli d'il·lusió compartir amb tot el poble, així que comptem amb cadascú de vosaltres perquè ens ajudeu a formar part del poble i de les seues festes.🫂🎆\n\n" +
+                "En aquesta aplicació, vos mantindrem al dia de totes les activitats que organitzem, així que vos esperem en cada acte i en cada celebració!🗓️🔔\n\n" +
+                "Visca Almussafes i visca la Divina Aurora!",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -81,13 +82,13 @@ fun HomeScreen() {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Properes Festes 2026",
+                    "DISCOMÒBIL EL 30 DE MAIG",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Estem preparant unes festes inoblidables. Consulta la secció de calendari per no perdre't res!",
+                    "Esteu preparats per a la pròxima gran festa dels Clavaris? \nNo vos pergau la festa en la pistapolivalent el proper 30 de Maig. \nVOS ESPEREM A TOTS!",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
