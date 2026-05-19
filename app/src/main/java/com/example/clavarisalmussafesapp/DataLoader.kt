@@ -224,7 +224,7 @@ object DataLoader {
         } catch (e: Exception) { null }
 
         if (jsonString != null) {
-            lotteryList = parseLotteriesJson(jsonString)
+            lotteryList = parseLotteriesJson(jsonString, context)
         }
 
         if (lotteryList.isEmpty()) {
@@ -232,17 +232,42 @@ object DataLoader {
                 context.assets.open("lotteries.json").bufferedReader().use { it.readText() }
             } catch (e: Exception) { null }
             if (jsonString != null) {
-                lotteryList = parseLotteriesJson(jsonString)
+                lotteryList = parseLotteriesJson(jsonString, context)
             }
         }
         lotteryList
     }
 
-    private fun parseLotteriesJson(jsonString: String): MutableList<LotteryPost> {
+    private fun parseLotteriesJson(jsonString: String, context: Context): MutableList<LotteryPost> {
         val list = mutableListOf<LotteryPost>()
         try {
-            val jsonArray = JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
+            var sanitizedJson = jsonString.trim()
+            if (sanitizedJson.endsWith(",")) {
+                sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
+            }
+            if (!sanitizedJson.endsWith("]")) {
+                sanitizedJson += "]"
+            }
+
+            val jsonArray = JSONArray(sanitizedJson)
+            val sharedPrefs = context.getSharedPreferences("clavaris_prefs", Context.MODE_PRIVATE)
+            val lastCount = sharedPrefs.getInt("last_lotteries_count", 0)
+            val currentCount = jsonArray.length()
+
+            if (currentCount > lastCount && lastCount != 0) {
+                val settingsPrefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
+                if (settingsPrefs.getBoolean("notifications_enabled", false)) {
+                    val firstItem = jsonArray.getJSONObject(0)
+                    NotificationHelper.sendNotification(
+                        context,
+                        "Nova rifa: ${firstItem.getString("title")}",
+                        "S'ha publicat una nova rifa en l'app."
+                    )
+                }
+            }
+            sharedPrefs.edit().putInt("last_lotteries_count", currentCount).apply()
+
+            for (i in 0 until currentCount) {
                 val obj = jsonArray.getJSONObject(i)
                 list.add(
                     LotteryPost(
