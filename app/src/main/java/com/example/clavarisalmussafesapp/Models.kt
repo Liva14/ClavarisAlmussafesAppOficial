@@ -19,6 +19,13 @@ data class NewsPost(
     val imageUrl: String? = null
 )
 
+data class LotteryPost(
+    val title: String,
+    val description: String,
+    val imageResName: String? = null,
+    val imageUrl: String? = null
+)
+
 enum class EventType(val color: Color, val label: String) {
     MERCADO(Color(0xFF2196F3), "Evento Mercado"),
     DISCOMOVIL(Color(0xFFE91E63), "Evento Discomovil"),

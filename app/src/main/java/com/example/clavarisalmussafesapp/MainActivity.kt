@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -73,13 +74,13 @@ class MainActivity : ComponentActivity() {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val updateRequest = PeriodicWorkRequestBuilder<UpdateWorker>(4, TimeUnit.HOURS)
+        val updateRequest = PeriodicWorkRequestBuilder<UpdateWorker>(15, TimeUnit.MINUTES)
             .setConstraints(constraints)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "clavaris_update_worker",
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE, // Actualizar para aplicar el cambio de 15 min
             updateRequest
         )
     }
@@ -96,10 +97,16 @@ fun sendNotification(context: Context) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    val sharedPref = remember { context.getSharedPreferences("prefs", Context.MODE_PRIVATE) }
+    
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    var notificationsEnabled by remember { mutableStateOf(false) }
+    
+    var notificationsEnabled by remember { 
+        mutableStateOf(sharedPref.getBoolean("notifications_enabled", false)) 
+    }
 
     val bottomScreens = listOf(
         Screens.Calendar,
@@ -151,7 +158,10 @@ fun MainApp(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
                         isDarkMode = isDarkMode,
                         onDarkModeChange = onDarkModeChange,
                         notificationsEnabled = notificationsEnabled,
-                        onNotificationsChange = { enabled -> notificationsEnabled = enabled }
+                        onNotificationsChange = { enabled -> 
+                            notificationsEnabled = enabled
+                            sharedPref.edit().putBoolean("notifications_enabled", enabled).apply()
+                        }
                     )
                 }
             }

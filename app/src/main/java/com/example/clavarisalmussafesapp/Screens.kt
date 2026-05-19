@@ -3,6 +3,7 @@ package com.example.clavarisalmussafesapp
 import android.Manifest
 import android.os.Build
 import java.util.Calendar
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -14,43 +15,64 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import kotlinx.coroutines.launch
 import kotlin.collections.*
 
 @Composable
 fun HomeScreen() {
+    val context = LocalContext.current
+    // Optimizamos: Cargamos y recordamos los IDs solo una vez
+    val sponsorLogos = remember {
+        listOf(
+            "abelmarrtipvc", "adrines", "almacentroestetica", "almontessori", "almucasa", "andreu",
+            "barhungria", "bit", "c4u", "cafeteriacentrecultural", "cambridgecenter", "carioca", "cga",
+            "clinicaluciasoler", "clinicavillalba", "colaita", "comercialagricola", "cr3", "crossatletica",
+            "dbmethod", "etform_logo2negro", "fante", "farmaciaaparici", "farmaciaguerrero",
+            "farmaciasebastian", "flowcamper", "fontaneria_almussafes", "fornrosa", "galaxyeventos",
+            "gervasgimenez", "inelectric", "inmobiliariaferrus", "judezjoyeros", "labarberia",
+            "logovillajos", "luissecretari", "maviclim", "medicser", "my prince", "norita", "parafarmaciavero",
+            "pinturascuevas", "protecx10n", "salvadorlladosa", "santacruz", "silviasalo", "solopizza",
+            "telca", "totobra", "valhala", "veterinariaordas", "vmc", "yokokan", "ypelos"
+        ).mapNotNull { logoName ->
+            val id = context.resources.getIdentifier(logoName.replace(" ", ""), "drawable", context.packageName)
+            if (id != 0) id else null
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // Hero Section
+        // Hero Image
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.clavaris),
-                contentDescription = "Clavaris Almussafes",
+                contentDescription = null,
                 modifier = Modifier.fillMaxWidth(),
                 contentScale = ContentScale.FillWidth
             )
@@ -65,7 +87,7 @@ fun HomeScreen() {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Benvolgut poble d'Almussafes, som els Clavaris de la Divina Aurora d'Almussafes per a les festes de 2026‼️\n\n" +
-                "Tenim un any molt especial per davant, que ens ompli d'il·lusió compartir amb tot el poble, així que comptem amb cadascú de vosaltres perquè ens ajudeu a formar part del poble i de les seues festes.🫂🎆\n\n" +
+                "Tenim un year molt especial per davant, que ens ompli d'il·lusió compartir amb tot el poble, així que comptem amb cadascú de vosaltres perquè ens ajudeu a formar part del poble i de les seues festes.🫂🎆\n\n" +
                 "En aquesta aplicació, vos mantindrem al dia de totes les activitats que organitzem, així que vos esperem en cada acte i en cada celebració!🗓️🔔\n\n" +
                 "Visca Almussafes i visca la Divina Aurora!",
                 style = MaterialTheme.typography.bodyLarge,
@@ -75,278 +97,234 @@ fun HomeScreen() {
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
         
-        // Espai per a un missatge destacat o informació general
+        // Destacado
         Card(
             modifier = Modifier.padding(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "DISCOMÒBIL EL 30 DE MAIG",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("DISCOMÒBIL EL 30 DE MAIG", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Esteu preparats per a la pròxima gran festa dels Clavaris? \nNo vos pergau la festa en la pistapolivalent el proper 30 de Maig. \nVOS ESPEREM A TOTS!",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text("Esteu preparats per a la pròxima gran festa dels Clavaris? \nNo vos pergau la festa en la pistapolivalent el proper 30 de Maig. \nVOS ESPEREM A TOTS!", style = MaterialTheme.typography.bodyMedium)
             }
         }
 
-        // Social Media Section
+        // Social Media
         val uriHandler = LocalUriHandler.current
-        
-        Text(
-            "Segueix-nos a les xarxes socials",
-            modifier = Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { uriHandler.openUri("https://www.instagram.com/clavarisalmussafes2026/") },
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE1306C).copy(alpha = 0.1f)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color(0xFFE1306C))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Instagram", color = Color(0xFFE1306C), fontWeight = FontWeight.Bold)
-                }
-            }
-            
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { uriHandler.openUri("https://www.tiktok.com/@clavarisalmussafes2026") },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("TikTok", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-                }
-            }
+        Text("Segueix-nos a les xarxes socials", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SocialCard("Instagram", Color(0xFFE1306C), Icons.Default.CameraAlt, Modifier.weight(1f)) { uriHandler.openUri("https://www.instagram.com/clavarisalmussafes2026/") }
+            SocialCard("TikTok", MaterialTheme.colorScheme.onSurface, Icons.Default.MusicNote, Modifier.weight(1f)) { uriHandler.openUri("https://www.tiktok.com/@clavarisalmussafes2026") }
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-        Text(
-            "Els nostres patrocinadors",
-            modifier = Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Text(
-            "Gràcies al suport d'aquestes empreses i comerços que fan possible la nostra activitat.",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // Patrocinadores 2x2
+        Text("Els nostres patrocinadors", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Gràcies al suport d'aquestes empreses i comerços.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        val context = LocalContext.current
-        val sponsorLogos = listOf(
-            "bit", "c4u", "cga", "cr3", "vmc", "fante", "telca", "andreu", "norita", "ypelos",
-            "adrines", "carioca", "colaita", "totobra", "valhala", "yokokan", "almucasa", "dbmethod",
-            "fornrosa", "maviclim", "medicser", "myprince", "santacruz", "solopizza", "barhungria",
-            "flowcamper", "inelectric", "labarberia", "protecx10n", "silviasalo", "zapatoslara",
-            "almontessori", "judezjoyeros", "logovillajos", "abelmarrtipvc", "crossatletica",
-            "galaxyeventos", "gervasgimenez", "luissecretari", "pinturascuevas", "cambridgecenter",
-            "clinicavillalba", "farmaciaaparici", "salvadorlladosa", "farmaciaguerrero", "parafarmaciavero",
-            "veterinariaordas", "clinicaluciasoler", "comercialagricola", "etform_logo2negro",
-            "farmaciasebastian", "almacentroestetica", "inmobiliariaferrus", "fontaneria_almussafes",
-            "cafeteriacentrecultural"
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            sponsorLogos.chunked(3).forEach { rowLogos ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    rowLogos.forEach { logoName ->
-                        val resId = context.resources.getIdentifier(logoName, "drawable", context.packageName)
-                        if (resId != 0) {
-                            Card(
-                                modifier = Modifier.weight(1f).aspectRatio(1.5f),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                            ) {
-                                Image(
-                                    painter = painterResource(id = resId),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().padding(8.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                    // Fill empty spaces in the last row if necessary
-                    repeat(3 - rowLogos.size) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
+        SponsorGrid(sponsorLogos)
         
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
 @Composable
-fun PostItem(title: String, description: String, imageResName: String) {
-    val context = LocalContext.current
-    val imageRes = remember(imageResName) {
-        context.resources.getIdentifier(imageResName, "drawable", context.packageName)
-    }
-
-    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(title, fontWeight = FontWeight.Bold)
+fun SocialCard(text: String, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            Icon(icon, contentDescription = null, tint = color)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text, color = color, fontWeight = FontWeight.Bold)
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(250.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            if (imageRes != 0) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-        }
-        Text(
-            description,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
 
 @Composable
+fun SponsorGrid(logos: List<Int>) {
+    // Rendimiento: Dividimos los logos en pares para un diseño 2x2
+    val rows = remember(logos) { logos.chunked(2) }
+    
+    Column(modifier = Modifier.padding(16.dp)) {
+        rows.forEach { rowLogos ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                rowLogos.forEach { resId ->
+                    Card(
+                        modifier = Modifier.weight(1f).aspectRatio(1.5f),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = resId),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(12.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+                // Si la fila está incompleta, rellenamos con un espacio invisible
+                if (rowLogos.size < 2) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun NewsScreen() {
     val context = LocalContext.current
-    val newsItems by produceState<List<NewsPost>>(initialValue = emptyList(), context) {
-        value = DataLoader.loadNews(context)
+    val scope = rememberCoroutineScope()
+    var newsItems by remember { mutableStateOf<List<NewsPost>>(emptyList()) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var selectedNews by remember { mutableStateOf<NewsPost?>(null) }
+
+    LaunchedEffect(Unit) {
+        isRefreshing = true
+        newsItems = DataLoader.loadNews(context)
+        isRefreshing = false
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        if (newsItems.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    if (selectedNews != null) {
+        BackHandler { selectedNews = null }
+        NewsDetailView(post = selectedNews!!, onBack = { selectedNews = null })
+    } else {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    newsItems = DataLoader.loadNews(context)
+                    isRefreshing = false
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                if (newsItems.isEmpty() && !isRefreshing) {
+                    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("No hi ha notícies disponibles", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else if (newsItems.isNotEmpty()) {
+                    val heroPost = newsItems.first()
+                    NewsHeroItem(post = heroPost, onClick = { selectedNews = heroPost })
+                    Spacer(modifier = Modifier.height(16.dp))
+                    newsItems.drop(1).forEach { post ->
+                        NewsSmallItem(post = post, onClick = { selectedNews = post })
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-        } else {
-            newsItems.forEach { item ->
-                NewsItem(
-                    title = item.title,
-                    description = item.description,
-                    imageResName = item.imageResName,
-                    imageUrl = item.imageUrl
+        }
+    }
+}
+
+@Composable
+fun NewsHeroItem(post: NewsPost, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val imageResId = remember(post.imageResName) {
+        if (post.imageResName != null) context.resources.getIdentifier(post.imageResName, "drawable", context.packageName) else 0
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Box(modifier = Modifier.fillMaxWidth().height(240.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            NewsImage(imageUrl = post.imageUrl, resId = imageResId, contentScale = ContentScale.Crop)
+        }
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("CLAVARIS 2026", style = MaterialTheme.typography.labelLarge, color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(post.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
+        }
+    }
+}
+
+@Composable
+fun NewsSmallItem(post: NewsPost, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val imageResId = remember(post.imageResName) {
+        if (post.imageResName != null) context.resources.getIdentifier(post.imageResName, "drawable", context.packageName) else 0
+    }
+
+    Row(modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("CLAVARIS 2026", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(post.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+        Box(modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            NewsImage(imageUrl = post.imageUrl, resId = imageResId, contentScale = ContentScale.Crop)
+        }
+    }
+}
+
+@Composable
+fun NewsImage(imageUrl: String?, resId: Int, contentScale: ContentScale) {
+    val context = LocalContext.current
+    if (imageUrl != null) {
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(imageUrl).crossfade(true).build(),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = contentScale
+        )
+    } else if (resId != 0) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = contentScale
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NewsDetailView(post: NewsPost, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val imageResId = remember(post.imageResName) {
+        if (post.imageResName != null) context.resources.getIdentifier(post.imageResName, "drawable", context.packageName) else 0
+    }
+
+    Scaffold(
+        topBar = {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+                CenterAlignedTopAppBar(
+                    title = { Text(post.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tornar") }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    windowInsets = WindowInsets(0, 0, 0, 0)
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             }
         }
-    }
-}
-
-@Composable
-fun NewsItem(title: String, description: String, imageResName: String?, imageUrl: String?) {
-    val context = LocalContext.current
-    val imageRes = remember(imageResName) {
-        if (imageResName != null) {
-            context.resources.getIdentifier(imageResName, "drawable", context.packageName)
-        } else 0
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Event,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+    ) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).background(MaterialTheme.colorScheme.background)) {
+            Box(modifier = Modifier.fillMaxWidth().wrapContentHeight().background(MaterialTheme.colorScheme.surfaceVariant)) {
+                NewsImage(imageUrl = post.imageUrl, resId = imageResId, contentScale = ContentScale.FillWidth)
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-        }
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            if (imageUrl != null) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth
-                )
-            } else if (imageRes != 0) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth
-                )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(post.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(post.description, style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp)
             }
+            Spacer(modifier = Modifier.height(32.dp))
         }
-
-        Text(
-            description,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
 
@@ -366,8 +344,6 @@ fun CalendarScreen() {
                 val list = eventsMap.getOrPut(event.date) { mutableListOf() }
                 list.add(event)
             }
-            
-            // Re-añadir el mercado si no viene del servidor
             for (month in 5..7) {
                 val tempCal = Calendar.getInstance()
                 tempCal.set(2026, month - 1, 1)
@@ -387,56 +363,27 @@ fun CalendarScreen() {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             val monthNames = listOf("Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre")
-            val monthName = "${monthNames[selectedMonth - 1]} $selectedYear"
-            
-            IconButton(onClick = { 
-                if (selectedMonth == 1) {
-                    selectedMonth = 12
-                    selectedYear--
-                } else {
-                    selectedMonth--
-                }
-            }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = null)
-            }
-            Text(monthName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            IconButton(onClick = { 
-                if (selectedMonth == 12) {
-                    selectedMonth = 1
-                    selectedYear++
-                } else {
-                    selectedMonth++
-                }
-            }) {
-                Icon(Icons.Default.ArrowForward, contentDescription = null)
+            Text("${monthNames[selectedMonth - 1]} $selectedYear", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row {
+                IconButton(onClick = { if (selectedMonth == 1) { selectedMonth = 12; selectedYear-- } else selectedMonth-- }) { Icon(Icons.Default.ArrowBack, null) }
+                IconButton(onClick = { if (selectedMonth == 12) { selectedMonth = 1; selectedYear++ } else selectedMonth++ }) { Icon(Icons.Default.ArrowForward, null) }
             }
         }
 
         // Calendar Grid
+        val gridCal = Calendar.getInstance().apply { set(Calendar.YEAR, selectedYear); set(Calendar.MONTH, selectedMonth - 1); set(Calendar.DAY_OF_MONTH, 1) }
+        val totalDays = gridCal.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val firstDayOffset = (gridCal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        val calendarItems = List(firstDayOffset) { null } + (1..totalDays).toList()
+
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 listOf("L", "M", "X", "J", "V", "S", "D").forEach { day ->
                     Text(day, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            val gridCal = Calendar.getInstance().apply {
-                set(Calendar.YEAR, selectedYear)
-                set(Calendar.MONTH, selectedMonth - 1)
-                set(Calendar.DAY_OF_MONTH, 1)
-            }
-            val totalDays = gridCal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            val firstDayOffset = (gridCal.get(Calendar.DAY_OF_WEEK) + 5) % 7
-
-            val calendarItems = List(firstDayOffset) { null } + (1..totalDays).toList()
-            
             calendarItems.chunked(7).forEach { week ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     week.forEach { day ->
@@ -444,32 +391,15 @@ fun CalendarScreen() {
                             val dateKey = "$selectedYear-$selectedMonth-$day"
                             val dayEvents = eventsMap[dateKey] ?: listOf()
                             val isSelected = selectedDay == day
-
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent)
-                                    .clickable { selectedDay = day },
-                                contentAlignment = Alignment.Center
-                            ) {
+                            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent).clickable { selectedDay = day }, contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        "$day",
-                                        color = if (isSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
+                                    Text("$day", color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        dayEvents.take(3).forEach { event ->
-                                            Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(event.type.color))
-                                        }
+                                        dayEvents.take(3).forEach { event -> Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(event.type.color)) }
                                     }
                                 }
                             }
-                        } else {
-                            Spacer(modifier = Modifier.size(40.dp))
-                        }
+                        } else Spacer(modifier = Modifier.size(40.dp))
                     }
                     repeat(7 - week.size) { Spacer(modifier = Modifier.size(40.dp)) }
                 }
@@ -478,142 +408,185 @@ fun CalendarScreen() {
 
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-        // Events List
         val currentEvents = eventsMap["$selectedYear-$selectedMonth-$selectedDay"] ?: listOf()
-        Column(
-            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-        ) {
-            Text(
-                "Events del dia $selectedDay",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            
+        Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text("Events del dia $selectedDay", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
             currentEvents.forEach { event ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    tonalElevation = 4.dp
-                ) {
-                    Row(
-                        modifier = Modifier.height(IntrinsicSize.Min),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(8.dp)
-                                .background(event.type.color)
-                        )
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(event.type.color))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(event.title, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Hora: ${event.time}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
+                Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(event.type.color))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(event.title, fontWeight = FontWeight.Bold)
+                            Text("Hora: ${event.time}", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
             }
-            if (currentEvents.isEmpty()) {
-                Text(
-                    "Tranquil·litat... no hi ha res previst.", 
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            }
+            if (currentEvents.isEmpty()) Text("Tranquil·litat... no hi ha res previst.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LotteryScreen() {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-    ) {
-        Text(
-            "Rifes", 
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.titleLarge, 
-            fontWeight = FontWeight.Bold
-        )
-        LotteryItem("Rifa Febrer", R.drawable.rifa_febrer)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var lotteryItems by remember { mutableStateOf<List<LotteryPost>>(emptyList()) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var selectedLottery by remember { mutableStateOf<LotteryPost?>(null) }
 
-        LotteryItem("Rifa Gener", R.drawable.rifa_gener)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-        LotteryItem("Rifa Nadal", R.drawable.rifa_nadal)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-        LotteryItem("Rifa Novembre", R.drawable.rifa_novembre)
+    LaunchedEffect(Unit) {
+        isRefreshing = true
+        lotteryItems = DataLoader.loadLotteries(context)
+        isRefreshing = false
     }
-}
 
-@Composable
-fun LotteryItem(title: String, imageRes: Int) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    if (selectedLottery != null) {
+        BackHandler { selectedLottery = null }
+        LotteryDetailView(post = selectedLottery!!, onBack = { selectedLottery = null })
+    } else {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    lotteryItems = DataLoader.loadLotteries(context)
+                    isRefreshing = false
+                }
+            },
+            modifier = Modifier.fillMaxSize()
         ) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                Icon(
-                    Icons.Default.ConfirmationNumber,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                if (lotteryItems.isEmpty() && !isRefreshing) {
+                    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("No hi ha rifes disponibles", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else if (lotteryItems.isNotEmpty()) {
+                    val heroPost = lotteryItems.first()
+                    LotteryHeroItem(post = heroPost, onClick = { selectedLottery = heroPost })
+                    Spacer(modifier = Modifier.height(16.dp))
+                    lotteryItems.drop(1).forEach { post ->
+                        LotterySmallItem(post = post, onClick = { selectedLottery = post })
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = title,
-                modifier = Modifier.fillMaxWidth(),
-                contentScale = ContentScale.FillWidth
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-fun SettingsScreen(
-    isDarkMode: Boolean,
-    onDarkModeChange: (Boolean) -> Unit,
-    notificationsEnabled: Boolean,
-    onNotificationsChange: (Boolean) -> Unit
-) {
+fun LotteryHeroItem(post: LotteryPost, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val imageResId = remember(post.imageResName) {
+        if (post.imageResName != null) context.resources.getIdentifier(post.imageResName, "drawable", context.packageName) else 0
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Box(modifier = Modifier.fillMaxWidth().height(240.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            LotteryImage(imageUrl = post.imageUrl, resId = imageResId, contentScale = ContentScale.Crop)
+        }
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("RIFES CLAVARIS 2026", style = MaterialTheme.typography.labelLarge, color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(post.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
+        }
+    }
+}
+
+@Composable
+fun LotterySmallItem(post: LotteryPost, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val imageResId = remember(post.imageResName) {
+        if (post.imageResName != null) context.resources.getIdentifier(post.imageResName, "drawable", context.packageName) else 0
+    }
+
+    Row(modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("RIFES CLAVARIS 2026", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(post.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+        Box(modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+            LotteryImage(imageUrl = post.imageUrl, resId = imageResId, contentScale = ContentScale.Crop)
+        }
+    }
+}
+
+@Composable
+fun LotteryImage(imageUrl: String?, resId: Int, contentScale: ContentScale) {
+    val context = LocalContext.current
+    if (imageUrl != null) {
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(imageUrl).crossfade(true).build(),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = contentScale
+        )
+    } else if (resId != 0) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = contentScale
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LotteryDetailView(post: LotteryPost, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val imageResId = remember(post.imageResName) {
+        if (post.imageResName != null) context.resources.getIdentifier(post.imageResName, "drawable", context.packageName) else 0
+    }
+
+    Scaffold(
+        topBar = {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+                CenterAlignedTopAppBar(
+                    title = { Text(post.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tornar") }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    windowInsets = WindowInsets(0, 0, 0, 0)
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            }
+        }
+    ) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).background(MaterialTheme.colorScheme.background)) {
+            Box(modifier = Modifier.fillMaxWidth().wrapContentHeight().background(MaterialTheme.colorScheme.surfaceVariant)) {
+                LotteryImage(imageUrl = post.imageUrl, resId = imageResId, contentScale = ContentScale.FillWidth)
+            }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(post.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(post.description, style = MaterialTheme.typography.bodyLarge, lineHeight = 24.sp)
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, notificationsEnabled: Boolean, onNotificationsChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     var showRationale by remember { mutableStateOf(false) }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+    var showAboutDialog by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         onNotificationsChange(isGranted)
-        if (isGranted) {
-            sendNotification(context)
-        }
+        if (isGranted) NotificationHelper.sendNotification(context, "Notificacions Actives", "Ara rebràs les noticies.")
     }
 
     if (showRationale) {
@@ -624,47 +597,28 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showRationale = false
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        onNotificationsChange(true)
-                        sendNotification(context)
-                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    else { onNotificationsChange(true); NotificationHelper.sendNotification(context, "Notificacions Actives", "Ara rebràs les noticies.") }
                 }) { Text("Activar") }
             },
-            dismissButton = {
-                TextButton(onClick = { showRationale = false }) { Text("Més tard") }
-            }
+            dismissButton = { TextButton(onClick = { showRationale = false }) { Text("Més tard") } }
         )
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Text(
-            "Configuració", 
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.titleLarge, 
-            fontWeight = FontWeight.Bold
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text("Acerca de") },
+            text = { Text("Aquesta aplicació ha estat desenvolupada com a part d'un Treball de Final de Grau (TFG).\n\nEs tracta d'un projecte sense ànim de lucre creat per a facilitar la comunicació i organització dels Clavaris d'Almussafes.") },
+            confirmButton = { TextButton(onClick = { showAboutDialog = false }) { Text("Tancar") } }
         )
-        
-        ListItem(
-            headlineContent = { Text("Mode fosc") },
-            trailingContent = {
-                Switch(checked = isDarkMode, onCheckedChange = onDarkModeChange)
-            }
-        )
-        
-        ListItem(
-            headlineContent = { Text("Notificacions") },
-            trailingContent = {
-                Switch(
-                    checked = notificationsEnabled,
-                    onCheckedChange = { enabled ->
-                        if (enabled) showRationale = true else onNotificationsChange(false)
-                    }
-                )
-            }
-        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Text("Configuració", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        ListItem(headlineContent = { Text("Mode fosc") }, trailingContent = { Switch(checked = isDarkMode, onCheckedChange = onDarkModeChange) })
+        ListItem(headlineContent = { Text("Notificacions") }, trailingContent = { Switch(checked = notificationsEnabled, onCheckedChange = { if (it) showRationale = true else onNotificationsChange(false) }) })
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        ListItem(headlineContent = { Text("Acerca de") }, modifier = Modifier.clickable { showAboutDialog = true }, trailingContent = { Icon(Icons.Default.Info, null) })
     }
 }
