@@ -10,6 +10,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,28 +36,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.collections.*
 
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
-    // Optimizamos: Cargamos y recordamos los IDs solo una vez
-    val sponsorLogos = remember {
-        listOf(
-            "abelmarrtipvc", "adrines", "almacentroestetica", "almontessori", "almucasa", "andreu",
-            "barhungria", "bit", "c4u", "cafeteriacentrecultural", "cambridgecenter", "carioca", "cga",
-            "clinicaluciasoler", "clinicavillalba", "colaita", "comercialagricola", "cr3", "crossatletica",
-            "dbmethod", "etform_logo2negro", "fante", "farmaciaaparici", "farmaciaguerrero",
-            "farmaciasebastian", "flowcamper", "fontaneria_almussafes", "fornrosa", "galaxyeventos",
-            "gervasgimenez", "inelectric", "inmobiliariaferrus", "judezjoyeros", "labarberia",
-            "logovillajos", "luissecretari", "maviclim", "medicser", "my prince", "norita", "parafarmaciavero",
-            "pinturascuevas", "protecx10n", "salvadorlladosa", "santacruz", "silviasalo", "solopizza",
-            "telca", "totobra", "valhala", "veterinariaordas", "vmc", "yokokan", "ypelos"
-        ).mapNotNull { logoName ->
-            val id = context.resources.getIdentifier(logoName.replace(" ", ""), "drawable", context.packageName)
-            if (id != 0) id else null
-        }
+    var sponsors by remember { mutableStateOf<List<Sponsor>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        sponsors = DataLoader.loadSponsors(context)
     }
 
     Column(
@@ -63,20 +54,8 @@ fun HomeScreen() {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // Hero Image
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.clavaris),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth(),
-                contentScale = ContentScale.FillWidth
-            )
-        }
+        // Hero Carousel
+        HomeCarousel()
         
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -123,9 +102,64 @@ fun HomeScreen() {
         Text("Els nostres patrocinadors", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text("Gràcies al suport d'aquestes empreses i comerços.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        SponsorGrid(sponsorLogos)
+        SponsorGrid(sponsors)
         
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun HomeCarousel() {
+    val images = remember {
+        val baseUrl = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/res/drawable/"
+        listOf(
+            "${baseUrl}Carru1.jpg",
+            "${baseUrl}Carru2.jpg",
+            "${baseUrl}Carru3.jpg",
+            "${baseUrl}Carru4.jpg",
+            "${baseUrl}Carru5.jpg",
+            "${baseUrl}Carru6.jpg"
+        )
+    }
+    
+    // Para hacer el carrusel infinito, usamos un número de páginas muy alto
+    val startIndex = Int.MAX_VALUE / 2
+    val initialPage = startIndex - (startIndex % images.size)
+    
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { Int.MAX_VALUE }
+    )
+    
+    // Auto-scroll logic
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(260.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            val actualIndex = page % images.size
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(images[actualIndex])
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
     }
 }
 
@@ -145,32 +179,44 @@ fun SocialCard(text: String, color: Color, icon: androidx.compose.ui.graphics.ve
 }
 
 @Composable
-fun SponsorGrid(logos: List<Int>) {
-    // Rendimiento: Dividimos los logos en pares para un diseño 2x2
-    val rows = remember(logos) { logos.chunked(2) }
+fun SponsorGrid(sponsors: List<Sponsor>) {
+    val rows = remember(sponsors) { sponsors.chunked(2) }
+    val context = LocalContext.current
     
     Column(modifier = Modifier.padding(16.dp)) {
-        rows.forEach { rowLogos ->
+        rows.forEach { rowSponsors ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                rowLogos.forEach { resId ->
+                rowSponsors.forEach { sponsor ->
                     Card(
                         modifier = Modifier.weight(1f).aspectRatio(1.5f),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Image(
-                            painter = painterResource(id = resId),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().padding(12.dp),
-                            contentScale = ContentScale.Fit
-                        )
+                        val imageResId = remember(sponsor.imageResName) {
+                            if (sponsor.imageResName != null) context.resources.getIdentifier(sponsor.imageResName, "drawable", context.packageName) else 0
+                        }
+
+                        if (sponsor.imageUrl != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(sponsor.imageUrl).crossfade(true).build(),
+                                contentDescription = sponsor.name,
+                                modifier = Modifier.fillMaxSize().padding(12.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else if (imageResId != 0) {
+                            Image(
+                                painter = painterResource(id = imageResId),
+                                contentDescription = sponsor.name,
+                                modifier = Modifier.fillMaxSize().padding(12.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                     }
                 }
-                // Si la fila está incompleta, rellenamos con un espacio invisible
-                if (rowLogos.size < 2) {
+                if (rowSponsors.size < 2) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
@@ -340,10 +386,12 @@ fun CalendarScreen() {
     LaunchedEffect(Unit) {
         if (eventsMap.isEmpty()) {
             val allEvents = DataLoader.loadEvents(context)
+            val tempMap = mutableMapOf<String, MutableList<CalendarEvent>>()
+            
             allEvents.forEach { event ->
-                val list = eventsMap.getOrPut(event.date) { mutableListOf() }
-                list.add(event)
+                tempMap.getOrPut(event.date) { mutableListOf() }.add(event)
             }
+            
             for (month in 5..7) {
                 val tempCal = Calendar.getInstance()
                 tempCal.set(2026, month - 1, 1)
@@ -352,13 +400,14 @@ fun CalendarScreen() {
                 for (day in 1..totalDays) {
                     if ((firstDayOffset + day - 1) % 7 == 1) {
                         val key = "2026-$month-$day"
-                        val list = eventsMap.getOrPut(key) { mutableListOf() }
+                        val list = tempMap.getOrPut(key) { mutableListOf() }
                         if (list.none { it.title == "Mercat" }) {
                             list.add(0, CalendarEvent(key, "Mercat", "10:00", EventType.MERCADO))
                         }
                     }
                 }
             }
+            eventsMap.putAll(tempMap)
         }
     }
 

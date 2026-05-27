@@ -21,6 +21,7 @@ object DataLoader {
     private const val NEWS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/news.json"
     private const val EVENTS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/events.json"
     private const val LOTTERIES_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/lotteries.json"
+    private const val SPONSORS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/sponsors.json"
 
     suspend fun loadNews(context: Context): List<NewsPost> = withContext(Dispatchers.IO) {
         var newsList = mutableListOf<NewsPost>()
@@ -280,6 +281,56 @@ object DataLoader {
             }
         } catch (e: Exception) {
             android.util.Log.e("DataLoader", "Error parsing lotteries JSON: ${e.message}")
+        }
+        return list
+    }
+
+    suspend fun loadSponsors(context: Context): List<Sponsor> = withContext(Dispatchers.IO) {
+        var sponsorList = mutableListOf<Sponsor>()
+        
+        var jsonString = try {
+            val request = Request.Builder()
+                .url(SPONSORS_URL)
+                .cacheControl(CacheControl.FORCE_NETWORK)
+                .addHeader("Cache-Control", "no-cache")
+                .build()
+            
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) response.body?.string() else null
+            }
+        } catch (e: Exception) { null }
+
+        if (jsonString != null) {
+            sponsorList = parseSponsorsJson(jsonString)
+        }
+
+        if (sponsorList.isEmpty()) {
+            jsonString = try {
+                context.assets.open("sponsors.json").bufferedReader().use { it.readText() }
+            } catch (e: Exception) { null }
+            if (jsonString != null) {
+                sponsorList = parseSponsorsJson(jsonString)
+            }
+        }
+        sponsorList
+    }
+
+    private fun parseSponsorsJson(jsonString: String): MutableList<Sponsor> {
+        val list = mutableListOf<Sponsor>()
+        try {
+            val jsonArray = JSONArray(jsonString)
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(
+                    Sponsor(
+                        name = obj.getString("name"),
+                        imageUrl = if (obj.has("imageUrl")) obj.getString("imageUrl") else null,
+                        imageResName = if (obj.has("imageResName")) obj.getString("imageResName") else null
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DataLoader", "Error parsing sponsors JSON: ${e.message}")
         }
         return list
     }
