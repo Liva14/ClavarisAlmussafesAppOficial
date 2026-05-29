@@ -40,11 +40,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.collections.*
 
+/**
+ * Pantalla de inicio de la aplicación.
+ * Muestra el carrusel de bienvenida, noticias destacadas, enlaces a redes sociales y patrocinadores.
+ */
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
     var sponsors by remember { mutableStateOf<List<Sponsor>>(emptyList()) }
 
+    // Carga la lista de patrocinadores desde el DataLoader al iniciar el componente
     LaunchedEffect(Unit) {
         sponsors = DataLoader.loadSponsors(context)
     }
@@ -54,9 +59,10 @@ fun HomeScreen() {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // Hero Carousel
+        // Carrusel dinámico de imágenes
         HomeCarousel()
         
+        // Mensaje de bienvenida oficial de los Clavaris
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 "Benvinguts a Clavaris Almussafes",
@@ -76,7 +82,7 @@ fun HomeScreen() {
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
         
-        // Destacado
+        // Tarjeta informativa sobre el próximo evento importante
         Card(
             modifier = Modifier.padding(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -88,7 +94,7 @@ fun HomeScreen() {
             }
         }
 
-        // Social Media
+        // Enlaces directos a las redes sociales oficiales
         val uriHandler = LocalUriHandler.current
         Text("Segueix-nos a les xarxes socials", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -98,9 +104,9 @@ fun HomeScreen() {
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-        // Patrocinadores 2x2
+        // Sección que agradece y muestra a los patrocinadores del proyecto
         Text("Els nostres patrocinadors", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Gràcies al suport d'aquestes empreses i comerços.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Gràcies al suport d'aquestes empreses y comerços.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         SponsorGrid(sponsors)
         
@@ -108,21 +114,24 @@ fun HomeScreen() {
     }
 }
 
+/**
+ * Carrusel de imágenes con desplazamiento automático e infinito.
+ */
 @Composable
 fun HomeCarousel() {
     val images = remember {
         val baseUrl = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/res/drawable/"
         listOf(
-            "${baseUrl}Carru1.jpg",
-            "${baseUrl}Carru2.jpg",
-            "${baseUrl}Carru3.jpg",
-            "${baseUrl}Carru4.jpg",
-            "${baseUrl}Carru5.jpg",
-            "${baseUrl}Carru6.jpg"
+            "${baseUrl}carru1.jpg",
+            "${baseUrl}carru2.jpg",
+            "${baseUrl}carru3.jpg",
+            "${baseUrl}carru4.jpg",
+            "${baseUrl}carru5.jpg",
+            "${baseUrl}carru6.jpg"
         )
     }
     
-    // Para hacer el carrusel infinito, usamos un número de páginas muy alto
+    // Configuración para simular un carrusel infinito usando un rango muy amplio de páginas
     val startIndex = Int.MAX_VALUE / 2
     val initialPage = startIndex - (startIndex % images.size)
     
@@ -131,7 +140,7 @@ fun HomeCarousel() {
         pageCount = { Int.MAX_VALUE }
     )
     
-    // Auto-scroll logic
+    // Lógica para el cambio automático de imagen cada 5 segundos
     LaunchedEffect(Unit) {
         while (true) {
             delay(5000)
@@ -163,6 +172,9 @@ fun HomeCarousel() {
     }
 }
 
+/**
+ * Componente reutilizable para las tarjetas de redes sociales.
+ */
 @Composable
 fun SocialCard(text: String, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
     Card(
@@ -178,6 +190,9 @@ fun SocialCard(text: String, color: Color, icon: androidx.compose.ui.graphics.ve
     }
 }
 
+/**
+ * Rejilla que organiza y muestra los logotipos de los patrocinadores en 2 columnas.
+ */
 @Composable
 fun SponsorGrid(sponsors: List<Sponsor>) {
     val rows = remember(sponsors) { sponsors.chunked(2) }
@@ -199,6 +214,7 @@ fun SponsorGrid(sponsors: List<Sponsor>) {
                             if (sponsor.imageResName != null) context.resources.getIdentifier(sponsor.imageResName, "drawable", context.packageName) else 0
                         }
 
+                        // Carga la imagen desde una URL o desde los recursos locales
                         if (sponsor.imageUrl != null) {
                             AsyncImage(
                                 model = ImageRequest.Builder(context).data(sponsor.imageUrl).crossfade(true).build(),
@@ -224,6 +240,10 @@ fun SponsorGrid(sponsors: List<Sponsor>) {
     }
 }
 
+/**
+ * Pantalla que lista las últimas noticias relacionadas con los Clavaris.
+ * Incluye funcionalidad de 'Pull to Refresh' para actualizar el contenido.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsScreen() {
@@ -233,12 +253,14 @@ fun NewsScreen() {
     var isRefreshing by remember { mutableStateOf(false) }
     var selectedNews by remember { mutableStateOf<NewsPost?>(null) }
 
+    // Carga inicial de noticias
     LaunchedEffect(Unit) {
         isRefreshing = true
         newsItems = DataLoader.loadNews(context)
         isRefreshing = false
     }
 
+    // Navegación condicional: muestra el detalle de la noticia o la lista general
     if (selectedNews != null) {
         BackHandler { selectedNews = null }
         NewsDetailView(post = selectedNews!!, onBack = { selectedNews = null })
@@ -265,9 +287,11 @@ fun NewsScreen() {
                         Text("No hi ha notícies disponibles", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else if (newsItems.isNotEmpty()) {
+                    // La noticia más reciente se muestra con un diseño destacado (Hero)
                     val heroPost = newsItems.first()
                     NewsHeroItem(post = heroPost, onClick = { selectedNews = heroPost })
                     Spacer(modifier = Modifier.height(16.dp))
+                    // El resto de noticias se muestran en formato reducido
                     newsItems.drop(1).forEach { post ->
                         NewsSmallItem(post = post, onClick = { selectedNews = post })
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
@@ -279,6 +303,9 @@ fun NewsScreen() {
     }
 }
 
+/**
+ * Diseño destacado para la noticia principal.
+ */
 @Composable
 fun NewsHeroItem(post: NewsPost, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -298,6 +325,9 @@ fun NewsHeroItem(post: NewsPost, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Diseño compacto para noticias en formato de lista.
+ */
 @Composable
 fun NewsSmallItem(post: NewsPost, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -317,6 +347,9 @@ fun NewsSmallItem(post: NewsPost, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Componente interno para gestionar la carga de imágenes de noticias (URL o Recurso).
+ */
 @Composable
 fun NewsImage(imageUrl: String?, resId: Int, contentScale: ContentScale) {
     val context = LocalContext.current
@@ -337,6 +370,9 @@ fun NewsImage(imageUrl: String?, resId: Int, contentScale: ContentScale) {
     }
 }
 
+/**
+ * Vista detallada de una noticia seleccionada.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsDetailView(post: NewsPost, onBack: () -> Unit) {
@@ -374,6 +410,9 @@ fun NewsDetailView(post: NewsPost, onBack: () -> Unit) {
     }
 }
 
+/**
+ * Pantalla de calendario que muestra los eventos y actos programados.
+ */
 @Composable
 fun CalendarScreen() {
     val context = LocalContext.current
@@ -383,6 +422,7 @@ fun CalendarScreen() {
     var selectedYear by remember { mutableIntStateOf(calendarInstance.get(Calendar.YEAR)) }
     val eventsMap = remember { mutableStateMapOf<String, MutableList<CalendarEvent>>() }
 
+    // Carga y organización de los eventos por fecha
     LaunchedEffect(Unit) {
         if (eventsMap.isEmpty()) {
             val allEvents = DataLoader.loadEvents(context)
@@ -392,6 +432,7 @@ fun CalendarScreen() {
                 tempMap.getOrPut(event.date) { mutableListOf() }.add(event)
             }
             
+            // Lógica para añadir eventos recurrentes (ej: Mercado todos los martes)
             for (month in 5..7) {
                 val tempCal = Calendar.getInstance()
                 tempCal.set(2026, month - 1, 1)
@@ -412,6 +453,7 @@ fun CalendarScreen() {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Cabecera del calendario con control de navegación entre meses
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             val monthNames = listOf("Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre")
             Text("${monthNames[selectedMonth - 1]} $selectedYear", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -421,7 +463,7 @@ fun CalendarScreen() {
             }
         }
 
-        // Calendar Grid
+        // Cuadrícula interactiva del calendario
         val gridCal = Calendar.getInstance().apply { set(Calendar.YEAR, selectedYear); set(Calendar.MONTH, selectedMonth - 1); set(Calendar.DAY_OF_MONTH, 1) }
         val totalDays = gridCal.getActualMaximum(Calendar.DAY_OF_MONTH)
         val firstDayOffset = (gridCal.get(Calendar.DAY_OF_WEEK) + 5) % 7
@@ -443,6 +485,7 @@ fun CalendarScreen() {
                             Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent).clickable { selectedDay = day }, contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("$day", color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                                    // Puntos indicadores de eventos para cada día
                                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                         dayEvents.take(3).forEach { event -> Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(event.type.color)) }
                                     }
@@ -457,6 +500,7 @@ fun CalendarScreen() {
 
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
+        // Lista de eventos detallada para el día seleccionado
         val currentEvents = eventsMap["$selectedYear-$selectedMonth-$selectedDay"] ?: listOf()
         Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text("Events del dia $selectedDay", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -478,6 +522,9 @@ fun CalendarScreen() {
     }
 }
 
+/**
+ * Pantalla que gestiona y muestra las rifas activas de los Clavaris.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LotteryScreen() {
@@ -487,6 +534,7 @@ fun LotteryScreen() {
     var isRefreshing by remember { mutableStateOf(false) }
     var selectedLottery by remember { mutableStateOf<LotteryPost?>(null) }
 
+    // Carga inicial de rifas
     LaunchedEffect(Unit) {
         isRefreshing = true
         lotteryItems = DataLoader.loadLotteries(context)
@@ -533,6 +581,9 @@ fun LotteryScreen() {
     }
 }
 
+/**
+ * Diseño destacado para la rifa principal.
+ */
 @Composable
 fun LotteryHeroItem(post: LotteryPost, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -552,6 +603,9 @@ fun LotteryHeroItem(post: LotteryPost, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Diseño compacto para rifas en formato de lista.
+ */
 @Composable
 fun LotterySmallItem(post: LotteryPost, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -571,6 +625,9 @@ fun LotterySmallItem(post: LotteryPost, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Gestiona la carga de imágenes para las rifas.
+ */
 @Composable
 fun LotteryImage(imageUrl: String?, resId: Int, contentScale: ContentScale) {
     val context = LocalContext.current
@@ -591,6 +648,9 @@ fun LotteryImage(imageUrl: String?, resId: Int, contentScale: ContentScale) {
     }
 }
 
+/**
+ * Detalle completo de una rifa específica.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LotteryDetailView(post: LotteryPost, onBack: () -> Unit) {
@@ -628,16 +688,23 @@ fun LotteryDetailView(post: LotteryPost, onBack: () -> Unit) {
     }
 }
 
+/**
+ * Pantalla de configuración del usuario.
+ * Permite cambiar el tema (claro/oscuro), gestionar notificaciones y ver información de la app.
+ */
 @Composable
 fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, notificationsEnabled: Boolean, onNotificationsChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     var showRationale by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    
+    // Lanzador para solicitar permisos de notificación en Android 13+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         onNotificationsChange(isGranted)
         if (isGranted) NotificationHelper.sendNotification(context, "Notificacions Actives", "Ara rebràs les noticies.")
     }
 
+    // Diálogo informativo sobre el uso de notificaciones
     if (showRationale) {
         AlertDialog(
             onDismissRequest = { showRationale = false },
@@ -654,11 +721,12 @@ fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, not
         )
     }
 
+    // Diálogo informativo sobre el origen de la aplicación
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
             title = { Text("Acerca de") },
-            text = { Text("Aquesta aplicació ha estat desenvolupada com a part d'un Treball de Final de Grau (TFG).\n\nEs tracta d'un projecte sense ànim de lucre creat per a facilitar la comunicació i organització dels Clavaris d'Almussafes.") },
+            text = { Text("Aquesta aplicació ha estat desenvolupada com a part d'un Treball de Final de Grau (TFG).\n\nEs tracta d'un projecte sense ànim de lucre creat per a facilitar la comunicació y organització dels Clavaris d'Almussafes.") },
             confirmButton = { TextButton(onClick = { showAboutDialog = false }) { Text("Tancar") } }
         )
     }

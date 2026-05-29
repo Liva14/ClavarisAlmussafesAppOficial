@@ -1,9 +1,6 @@
 package com.example.clavarisalmussafesapp
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,8 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -35,6 +30,9 @@ import androidx.work.WorkManager
 import com.example.clavarisalmussafesapp.ui.theme.ClavarisAlmussafesAppTheme
 import java.util.concurrent.TimeUnit
 
+/**
+ * Definición de las pantallas de la aplicación para la navegación.
+ */
 object Screens {
     object Home : Screen("home", "Clavaris Almussafes", Icons.Default.Home)
     object News : Screen("news", "Noticies", Icons.Default.Public)
@@ -43,11 +41,17 @@ object Screens {
     object Settings : Screen("settings", "Configuració", Icons.Default.Settings)
 }
 
+/**
+ * Actividad principal de la aplicación.
+ * Gestiona el tema, el canal de notificaciones y la programación del trabajador de actualizaciones.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         val sharedPref = getSharedPreferences("prefs", Context.MODE_PRIVATE)
+        
+        // Inicialización de utilidades
         NotificationHelper.createNotificationChannel(this)
         scheduleUpdateWorker()
 
@@ -57,6 +61,7 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(sharedPref.getBoolean("isDarkMode", false)) 
             }
             
+            // Aplicación del tema personalizado de Compose
             ClavarisAlmussafesAppTheme(darkTheme = isDarkMode) {
                 MainApp(
                     isDarkMode = isDarkMode, 
@@ -69,6 +74,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Programa una tarea en segundo plano para buscar actualizaciones cada 15 minutos.
+     */
     private fun scheduleUpdateWorker() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -80,12 +88,15 @@ class MainActivity : ComponentActivity() {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "clavaris_update_worker",
-            ExistingPeriodicWorkPolicy.UPDATE, // Actualizar para aplicar el cambio de 15 min
+            ExistingPeriodicWorkPolicy.UPDATE,
             updateRequest
         )
     }
 }
 
+/**
+ * Función de utilidad para probar el envío de notificaciones.
+ */
 fun sendNotification(context: Context) {
     NotificationHelper.sendNotification(
         context,
@@ -94,6 +105,9 @@ fun sendNotification(context: Context) {
     )
 }
 
+/**
+ * Componente principal que define la estructura de la aplicación con Scaffold.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
@@ -108,6 +122,7 @@ fun MainApp(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
         mutableStateOf(sharedPref.getBoolean("notifications_enabled", false)) 
     }
 
+    // Lista de pantallas para la barra de navegación inferior
     val bottomScreens = listOf(
         Screens.Calendar,
         Screens.Lottery,
@@ -148,6 +163,7 @@ fun MainApp(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // Definición del grafo de navegación
             NavHost(navController = navController, startDestination = Screens.Home.route) {
                 composable(Screens.Home.route) { HomeScreen() }
                 composable(Screens.News.route) { NewsScreen() }
@@ -169,6 +185,9 @@ fun MainApp(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
     }
 }
 
+/**
+ * Componente de la barra de navegación inferior con iconos interactivos.
+ */
 @Composable
 fun BottomNavigationBar(navController: NavHostController, screens: List<Screen>) {
     Column {

@@ -6,13 +6,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Monochrome Palette
+// Paleta de colores en escala de grises para un diseño elegante
 private val White = Color(0xFFFFFFFF)
 private val Black = Color(0xFF000000)
 private val DarkGray = Color(0xFF1C1C1C)
 private val MediumGray = Color(0xFF757575)
 private val LightGray = Color(0xFFE0E0E0)
 
+/**
+ * Esquema de colores para el modo oscuro.
+ */
 private val DarkColorScheme = darkColorScheme(
     primary = White,
     secondary = MediumGray,
@@ -28,6 +31,9 @@ private val DarkColorScheme = darkColorScheme(
     outline = MediumGray
 )
 
+/**
+ * Esquema de colores para el modo claro.
+ */
 private val LightColorScheme = lightColorScheme(
     primary = Black,
     secondary = MediumGray,
@@ -43,6 +49,10 @@ private val LightColorScheme = lightColorScheme(
     outline = MediumGray
 )
 
+/**
+ * Tema principal de la aplicación Clavaris Almussafes.
+ * Aplica los colores y la tipografía seleccionados según el modo del sistema o preferencia del usuario.
+ */
 @Composable
 fun ClavarisAlmussafesAppTheme(
     darkTheme: Boolean = false,

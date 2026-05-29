@@ -10,6 +10,10 @@ import org.json.JSONArray
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+/**
+ * Gestor de carga de datos de la aplicación.
+ * Se encarga de obtener información desde GitHub (remoto) o desde los Assets (local) como respaldo.
+ */
 object DataLoader {
 
     private val client = OkHttpClient.Builder()
@@ -17,16 +21,17 @@ object DataLoader {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
     
-    // URLs Raw de GitHub
     private const val NEWS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/news.json"
     private const val EVENTS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/events.json"
     private const val LOTTERIES_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/lotteries.json"
     private const val SPONSORS_URL = "https://raw.githubusercontent.com/Liva14/ClavarisAlmussafesAppOficial/master/app/src/main/assets/sponsors.json"
 
+    /**
+     * Carga las noticias. Intenta primero la red y luego los assets locales.
+     */
     suspend fun loadNews(context: Context): List<NewsPost> = withContext(Dispatchers.IO) {
         var newsList = mutableListOf<NewsPost>()
         
-        // 1. Intentar cargar desde URL (Forzando no usar cache)
         var jsonString = try {
             val request = Request.Builder()
                 .url(NEWS_URL)
@@ -35,25 +40,17 @@ object DataLoader {
                 .build()
             
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.e("DataLoader", "News URL failed: $response")
-                    throw IOException("Unexpected code $response")
-                }
-                response.body?.string().also {
-                    if (it != null) android.util.Log.d("DataLoader", "News loaded from URL successfully. Length: ${it.length}")
-                }
+                if (!response.isSuccessful) throw IOException("Error: $response")
+                response.body?.string()
             }
         } catch (e: Exception) {
-            android.util.Log.e("DataLoader", "Exception loading news from URL: ${e.message}")
             null
         }
 
-        // 2. Intentar parsear el JSON de la URL
         if (jsonString != null) {
             newsList = parseNewsJson(jsonString, context)
         }
 
-        // 3. Si falló la URL o el parseo devolvió lista vacía, intentar Assets
         if (newsList.isEmpty()) {
             jsonString = try {
                 context.assets.open("news.json").bufferedReader().use { it.readText() }
@@ -68,18 +65,15 @@ object DataLoader {
         newsList
     }
 
+    /**
+     * Parsea el JSON de noticias y gestiona el envío de notificaciones si hay contenido nuevo.
+     */
     private fun parseNewsJson(jsonString: String, context: Context): MutableList<NewsPost> {
         val list = mutableListOf<NewsPost>()
         try {
             var sanitizedJson = jsonString.trim()
-            // Si el JSON termina en coma (error común), la quitamos
-            if (sanitizedJson.endsWith(",")) {
-                sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
-            }
-            // Si no termina en ], lo añadimos para cerrar el array
-            if (!sanitizedJson.endsWith("]")) {
-                sanitizedJson += "]"
-            }
+            if (sanitizedJson.endsWith(",")) sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
+            if (!sanitizedJson.endsWith("]")) sanitizedJson += "]"
             
             val jsonArray = JSONArray(sanitizedJson)
             val sharedPrefs = context.getSharedPreferences("clavaris_prefs", Context.MODE_PRIVATE)
@@ -87,7 +81,6 @@ object DataLoader {
             val currentCount = jsonArray.length()
             
             if (currentCount > lastCount && lastCount != 0) {
-                // Solo si las notificaciones están activas en preferencias
                 val settingsPrefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
                 if (settingsPrefs.getBoolean("notifications_enabled", false)) {
                     val firstItem = jsonArray.getJSONObject(0)
@@ -112,16 +105,17 @@ object DataLoader {
                 )
             }
         } catch (e: Exception) {
-            android.util.Log.e("DataLoader", "Error parsing news JSON: ${e.message}")
             e.printStackTrace()
         }
         return list
     }
 
+    /**
+     * Carga los eventos del calendario desde remoto o local.
+     */
     suspend fun loadEvents(context: Context): List<CalendarEvent> = withContext(Dispatchers.IO) {
         var eventList = mutableListOf<CalendarEvent>()
         
-        // 1. Intentar cargar desde URL (Forzando no usar cache)
         var jsonString = try {
             val request = Request.Builder()
                 .url(EVENTS_URL)
@@ -130,25 +124,17 @@ object DataLoader {
                 .build()
             
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    android.util.Log.e("DataLoader", "Events URL failed: $response")
-                    throw IOException("Unexpected code $response")
-                }
-                response.body?.string().also {
-                    if (it != null) android.util.Log.d("DataLoader", "Events loaded from URL successfully. Length: ${it.length}")
-                }
+                if (!response.isSuccessful) throw IOException("Error: $response")
+                response.body?.string()
             }
         } catch (e: Exception) {
-            android.util.Log.e("DataLoader", "Exception loading events from URL: ${e.message}")
             null
         }
 
-        // 2. Intentar parsear el JSON de la URL
         if (jsonString != null) {
             eventList = parseEventsJson(jsonString, context)
         }
 
-        // 3. Si falló la URL o el parseo devolvió lista vacía, intentar Assets
         if (eventList.isEmpty()) {
             jsonString = try {
                 context.assets.open("events.json").bufferedReader().use { it.readText() }
@@ -163,16 +149,15 @@ object DataLoader {
         eventList
     }
 
+    /**
+     * Parsea el JSON de eventos y notifica al usuario si hay actualizaciones.
+     */
     private fun parseEventsJson(jsonString: String, context: Context): MutableList<CalendarEvent> {
         val list = mutableListOf<CalendarEvent>()
         try {
             var sanitizedJson = jsonString.trim()
-            if (sanitizedJson.endsWith(",")) {
-                sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
-            }
-            if (!sanitizedJson.endsWith("]")) {
-                sanitizedJson += "]"
-            }
+            if (sanitizedJson.endsWith(",")) sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
+            if (!sanitizedJson.endsWith("]")) sanitizedJson += "]"
             
             val jsonArray = JSONArray(sanitizedJson)
             val sharedPrefs = context.getSharedPreferences("clavaris_prefs", Context.MODE_PRIVATE)
@@ -182,11 +167,7 @@ object DataLoader {
             if (currentCount > lastCount && lastCount != 0) {
                 val settingsPrefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
                 if (settingsPrefs.getBoolean("notifications_enabled", false)) {
-                    NotificationHelper.sendNotification(
-                        context,
-                        "Nou esdeveniment",
-                        "S'han afegit nous esdeveniments al calendari."
-                    )
+                    NotificationHelper.sendNotification(context, "Nou esdeveniment", "S'han afegit nous esdeveniments al calendari.")
                 }
             }
             sharedPrefs.edit().putInt("last_events_count", currentCount).apply()
@@ -203,12 +184,14 @@ object DataLoader {
                 )
             }
         } catch (e: Exception) {
-            android.util.Log.e("DataLoader", "Error parsing events JSON: ${e.message}")
             e.printStackTrace()
         }
         return list
     }
 
+    /**
+     * Carga las rifas desde remoto o local.
+     */
     suspend fun loadLotteries(context: Context): List<LotteryPost> = withContext(Dispatchers.IO) {
         var lotteryList = mutableListOf<LotteryPost>()
         
@@ -239,16 +222,15 @@ object DataLoader {
         lotteryList
     }
 
+    /**
+     * Parsea el JSON de rifas y gestiona notificaciones.
+     */
     private fun parseLotteriesJson(jsonString: String, context: Context): MutableList<LotteryPost> {
         val list = mutableListOf<LotteryPost>()
         try {
             var sanitizedJson = jsonString.trim()
-            if (sanitizedJson.endsWith(",")) {
-                sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
-            }
-            if (!sanitizedJson.endsWith("]")) {
-                sanitizedJson += "]"
-            }
+            if (sanitizedJson.endsWith(",")) sanitizedJson = sanitizedJson.substring(0, sanitizedJson.length - 1)
+            if (!sanitizedJson.endsWith("]")) sanitizedJson += "]"
 
             val jsonArray = JSONArray(sanitizedJson)
             val sharedPrefs = context.getSharedPreferences("clavaris_prefs", Context.MODE_PRIVATE)
@@ -259,11 +241,7 @@ object DataLoader {
                 val settingsPrefs = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
                 if (settingsPrefs.getBoolean("notifications_enabled", false)) {
                     val firstItem = jsonArray.getJSONObject(0)
-                    NotificationHelper.sendNotification(
-                        context,
-                        "Nova rifa: ${firstItem.getString("title")}",
-                        "S'ha publicat una nova rifa en l'app."
-                    )
+                    NotificationHelper.sendNotification(context, "Nova rifa: ${firstItem.getString("title")}", "S'ha publicat una nova rifa en l'app.")
                 }
             }
             sharedPrefs.edit().putInt("last_lotteries_count", currentCount).apply()
@@ -279,12 +257,13 @@ object DataLoader {
                     )
                 )
             }
-        } catch (e: Exception) {
-            android.util.Log.e("DataLoader", "Error parsing lotteries JSON: ${e.message}")
-        }
+        } catch (e: Exception) { }
         return list
     }
 
+    /**
+     * Carga la lista de patrocinadores desde remoto o local.
+     */
     suspend fun loadSponsors(context: Context): List<Sponsor> = withContext(Dispatchers.IO) {
         var sponsorList = mutableListOf<Sponsor>()
         
@@ -315,6 +294,9 @@ object DataLoader {
         sponsorList
     }
 
+    /**
+     * Parsea el JSON de patrocinadores.
+     */
     private fun parseSponsorsJson(jsonString: String): MutableList<Sponsor> {
         val list = mutableListOf<Sponsor>()
         try {
@@ -329,9 +311,7 @@ object DataLoader {
                     )
                 )
             }
-        } catch (e: Exception) {
-            android.util.Log.e("DataLoader", "Error parsing sponsors JSON: ${e.message}")
-        }
+        } catch (e: Exception) { }
         return list
     }
 }
